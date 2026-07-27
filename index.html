@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>3D Viewer + Heatmap</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="markers"></div>
+
+    <div id="loader">
+      <div class="loader-box">
+        <div class="loader-title">Loading model</div>
+        <div class="loader-bar"><i id="loader-fill"></i></div>
+        <div class="loader-pct" id="loader-pct">0%</div>
+      </div>
+    </div>
+
+    <div id="hud">
+      <strong>Heatmap 3D</strong>
+      <span id="hud-stats">—</span>
+      <span class="hud-hint">Click the model = new point · Click a ring = select · Shift+click = delete · Arrows = move</span>
+    </div>
+
+    <button id="panel-toggle" title="Show/hide editor">☰</button>
+
+    <aside id="panel">
+      <header class="panel-head">
+        <h1>Heatmap editor</h1>
+        <div class="head-actions">
+          <button id="panel-expand" title="Expand or collapse every section">⇕</button>
+          <button id="panel-close" title="Hide">✕</button>
+        </div>
+      </header>
+
+      <div class="panel-body">
+        <!-- ---------------- POINTS ---------------- -->
+        <details class="group" open>
+          <summary>Points <span class="count" id="pt-count">0</span></summary>
+          <div class="group-body">
+            <div class="btn-row">
+              <button id="pt-random" class="btn">Scatter 8 at random</button>
+              <button id="pt-clear" class="btn danger">Clear all</button>
+            </div>
+            <ul class="pt-list" id="pt-list"></ul>
+
+            <div class="sel-point" id="sel-point">
+              <div class="sel-head">Selected point <b id="sel-name">none</b></div>
+
+              <div class="btn-row">
+                <button id="pt-duplicate" class="btn">Duplicate (Ctrl+D)</button>
+              </div>
+
+              <label class="row slider">
+                <span>Radius <b id="radius-val">—</b></span>
+                <input type="range" id="radius" min="0.005" max="1" step="0.005" />
+              </label>
+              <label class="row slider">
+                <span>Coverage <b id="weight-val">—</b></span>
+                <input type="range" id="weight" min="0" max="2" step="0.01" />
+              </label>
+              <label class="row slider">
+                <span>Pain level <b id="level-val">—</b></span>
+                <input type="range" id="level" min="0" max="1" step="0.01" />
+              </label>
+              <p class="hint">
+                0 means no pain (cold end of the palette), 1 means severe pain (hot end).
+                Needs the <em>Per point</em> color mode.
+              </p>
+
+              <div class="axes">
+                <div class="sel-head">Position</div>
+                <label class="row slider">
+                  <span>Left / right &nbsp;<i>X</i> <b id="px-val">—</b></span>
+                  <input type="range" id="px" />
+                </label>
+                <label class="row slider">
+                  <span>Down / up &nbsp;<i>Y</i> <b id="py-val">—</b></span>
+                  <input type="range" id="py" />
+                </label>
+                <label class="row slider">
+                  <span>Back / front &nbsp;<i>Z</i> <b id="pz-val">—</b></span>
+                  <input type="range" id="pz" />
+                </label>
+                <p class="hint">
+                  Arrow keys move it too; hold Shift for the Z axis and Alt for fine steps.
+                </p>
+              </div>
+
+              <div class="axes">
+                <div class="sel-head">Shape — 1/1/1 is a sphere, anything else an ellipsoid</div>
+                <label class="row slider">
+                  <span>Width &nbsp;<i>X</i> <b id="sx-val">—</b></span>
+                  <input type="range" id="sx" min="0.1" max="4" step="0.01" />
+                </label>
+                <label class="row slider">
+                  <span>Height &nbsp;<i>Y</i> <b id="sy-val">—</b></span>
+                  <input type="range" id="sy" min="0.1" max="4" step="0.01" />
+                </label>
+                <label class="row slider">
+                  <span>Depth &nbsp;<i>Z</i> <b id="sz-val">—</b></span>
+                  <input type="range" id="sz" min="0.1" max="4" step="0.01" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- ---------------- MARKERS ---------------- -->
+        <details class="group">
+          <summary>Markers (joints)</summary>
+          <div class="group-body">
+            <p class="hint">
+              A UI overlay on top of the render. They keep the same size at any distance.
+              The structure is dot, gap and ring.
+            </p>
+
+            <label class="row check">
+              <span>Enabled</span>
+              <input type="checkbox" id="mark-on" checked />
+            </label>
+            <label class="row slider">
+              <span>Ring diameter <b id="mark-size-val">34 px</b></span>
+              <input type="range" id="mark-size" min="8" max="90" step="1" value="34" />
+            </label>
+            <label class="row slider">
+              <span>Dot diameter <b id="mark-dot-val">14 px</b></span>
+              <input type="range" id="mark-dot" min="0" max="60" step="1" value="14" />
+            </label>
+            <label class="row slider">
+              <span>Ring thickness <b id="mark-border-val">3 px</b></span>
+              <input type="range" id="mark-border" min="1" max="14" step="1" value="3" />
+            </label>
+            <label class="row">
+              <span>Color</span>
+              <input type="color" id="mark-color" value="#ffffff" />
+            </label>
+            <label class="row check">
+              <span>Color by pain level</span>
+              <input type="checkbox" id="mark-pain" />
+            </label>
+            <label class="row slider">
+              <span>Opacity <b id="mark-opacity-val">1.00</b></span>
+              <input type="range" id="mark-opacity" min="0" max="1" step="0.01" value="1" />
+            </label>
+            <label class="row check">
+              <span>Hide the ones facing away</span>
+              <input type="checkbox" id="mark-hide" checked />
+            </label>
+          </div>
+        </details>
+
+        <!-- ---------------- COLOR ---------------- -->
+        <details class="group">
+          <summary>Heatmap color</summary>
+          <div class="group-body">
+            <label class="row">
+              <span>Palette</span>
+              <select id="preset"></select>
+            </label>
+
+            <div class="grad-editor">
+              <div class="grad-bar" id="grad-bar">
+                <div class="grad-stops" id="grad-stops"></div>
+              </div>
+              <div class="grad-scale"><span>0 · cold</span><span>1 · hot</span></div>
+            </div>
+
+            <div class="stop-edit" id="stop-edit">
+              <label class="row">
+                <span>Stop color</span>
+                <input type="color" id="stop-color" />
+              </label>
+              <label class="row slider">
+                <span>Position <b id="stop-pos-val">0.00</b></span>
+                <input type="range" id="stop-pos" min="0" max="1" step="0.001" />
+              </label>
+              <div class="btn-row">
+                <button id="stop-add" class="btn">+ Add stop</button>
+                <button id="stop-del" class="btn danger">Delete stop</button>
+              </div>
+            </div>
+
+            <label class="row">
+              <span>Where the color comes from</span>
+              <select id="color-mode">
+                <option value="acumulado">Accumulated heat</option>
+                <option value="porPunto">Per point (pain level)</option>
+              </select>
+            </label>
+            <p class="hint" id="color-mode-hint"></p>
+          </div>
+        </details>
+
+        <!-- ---------------- SIZE AND BLENDING ---------------- -->
+        <details class="group">
+          <summary>Size and blending</summary>
+          <div class="group-body">
+            <label class="row slider">
+              <span>Global scale <b id="size-val">1.00×</b></span>
+              <input type="range" id="size" min="0.05" max="4" step="0.01" value="1" />
+            </label>
+            <label class="row slider">
+              <span>Edge sharpness <b id="falloff-val">1.00</b></span>
+              <input type="range" id="falloff" min="0.2" max="6" step="0.05" value="1" />
+            </label>
+
+            <label class="row">
+              <span>Blend mode</span>
+              <select id="blend"></select>
+            </label>
+            <p class="hint" id="blend-hint"></p>
+
+            <label class="row slider">
+              <span>Intensity <b id="intensity-val">1.00</b></span>
+              <input type="range" id="intensity" min="0" max="4" step="0.01" value="1" />
+            </label>
+            <label class="row slider">
+              <span>Opacity <b id="opacity-val">0.90</b></span>
+              <input type="range" id="opacity" min="0" max="1" step="0.01" value="0.9" />
+            </label>
+            <label class="row slider">
+              <span>Floor (tints the whole model) <b id="floor-val">0.00</b></span>
+              <input type="range" id="floor" min="0" max="1" step="0.01" value="0" />
+            </label>
+            <label class="row slider">
+              <span>Desaturate base texture <b id="desat-val">0.00</b></span>
+              <input type="range" id="desat" min="0" max="1" step="0.01" value="0" />
+            </label>
+            <p class="hint">
+              Desaturating is only needed with the chroma key <em>off</em>. With zones
+              active the fabric is already forced to a flat color in the shader.
+            </p>
+          </div>
+        </details>
+
+        <!-- ---------------- GRID ---------------- -->
+        <details class="group">
+          <summary>Suit grid</summary>
+          <div class="group-body">
+            <p class="hint">
+              Drawn mathematically in the shader rather than from a texture: a 1 px line
+              in a map vanishes as the model shrinks, this one stays crisp.
+            </p>
+
+            <label class="row check">
+              <span>Enabled</span>
+              <input type="checkbox" id="grid-on" checked />
+            </label>
+            <label class="row">
+              <span>Projection</span>
+              <select id="grid-mode">
+                <option value="triplanar">Model 3D space</option>
+                <option value="uv">Texture UVs</option>
+              </select>
+            </label>
+            <p class="hint" id="grid-mode-hint"></p>
+            <label class="row slider">
+              <span>Density <b id="grid-density-val">60</b></span>
+              <input type="range" id="grid-density" min="4" max="240" step="1" value="60" />
+            </label>
+            <label class="row slider">
+              <span>Line width <b id="grid-width-val">0.035</b></span>
+              <input type="range" id="grid-width" min="0.002" max="0.25" step="0.001" value="0.035" />
+            </label>
+            <label class="row slider">
+              <span>Opacity <b id="grid-opacity-val">0.22</b></span>
+              <input type="range" id="grid-opacity" min="0" max="1" step="0.01" value="0.22" />
+            </label>
+            <label class="row">
+              <span>Color</span>
+              <input type="color" id="grid-color" value="#ffffff" />
+            </label>
+            <label class="row check">
+              <span>Only over the heat zone</span>
+              <input type="checkbox" id="grid-zone-only" checked />
+            </label>
+            <label class="row">
+              <span>Style</span>
+              <select id="grid-style">
+                <option value="0">Square</option>
+                <option value="1">Horizontal lines only</option>
+                <option value="2">Vertical lines only</option>
+              </select>
+            </label>
+            <label class="row slider">
+              <span>Rotation <b id="grid-rot-val">0°</b></span>
+              <input type="range" id="grid-rot" min="0" max="90" step="1" value="0" />
+            </label>
+            <label class="row slider">
+              <span>Cell aspect <b id="grid-aspect-val">1.00</b></span>
+              <input type="range" id="grid-aspect" min="0.25" max="4" step="0.01" value="1" />
+            </label>
+          </div>
+        </details>
+
+        <!-- ---------------- ZONES ---------------- -->
+        <details class="group">
+          <summary>Zones (chroma key)</summary>
+          <div class="group-body">
+            <p class="hint">
+              Green marks where the heatmap shows. Everything that isn't green (armor,
+              seams) is drawn on top and covers the heat.
+            </p>
+
+            <label class="row check">
+              <span>Enable chroma key</span>
+              <input type="checkbox" id="zone-on" checked />
+            </label>
+            <p class="hint" id="zone-name">Using the model's own texture</p>
+
+            <div class="btn-row">
+              <button id="zone-load" class="btn">Load another PNG…</button>
+              <button id="zone-clear" class="btn">Back to the model's</button>
+            </div>
+            <input type="file" id="zone-file" accept="image/png,image/jpeg,image/webp" hidden />
+
+            <label class="row">
+              <span>Key color</span>
+              <input type="color" id="zone-key" value="#1fb81f" />
+            </label>
+            <label class="row">
+              <span>Zone flat color</span>
+              <input type="color" id="zone-flat" value="#d9dde4" />
+            </label>
+            <label class="row">
+              <span>Armor color</span>
+              <input type="color" id="zone-armor" value="#ffffff" />
+            </label>
+            <label class="row slider">
+              <span>Tolerance <b id="zone-tol-val">0.50</b></span>
+              <input type="range" id="zone-tol" min="0" max="1.2" step="0.01" value="0.5" />
+            </label>
+            <label class="row slider">
+              <span>Edge softness <b id="zone-soft-val">0.28</b></span>
+              <input type="range" id="zone-soft" min="0.01" max="0.6" step="0.01" value="0.28" />
+            </label>
+            <label class="row check">
+              <span>Invert the mask</span>
+              <input type="checkbox" id="zone-invert" />
+            </label>
+            <label class="row check">
+              <span>Flip V (if it comes out upside down)</span>
+              <input type="checkbox" id="zone-flip" />
+            </label>
+            <label class="row check">
+              <span>Show the mask in black and white</span>
+              <input type="checkbox" id="zone-debug" />
+            </label>
+          </div>
+        </details>
+
+        <!-- ---------------- LIGHTING ---------------- -->
+        <details class="group">
+          <summary>Light and shadows</summary>
+          <div class="group-body">
+            <label class="row slider">
+              <span>Intensity <b id="light-key-val">2.40</b></span>
+              <input type="range" id="light-key" min="0" max="8" step="0.05" value="2.4" />
+            </label>
+            <label class="row">
+              <span>Light color</span>
+              <input type="color" id="light-color" value="#ffffff" />
+            </label>
+            <label class="row slider">
+              <span>Rotation <b id="light-az-val">35°</b></span>
+              <input type="range" id="light-az" min="-180" max="180" step="1" value="35" />
+            </label>
+            <label class="row slider">
+              <span>Height <b id="light-el-val">45°</b></span>
+              <input type="range" id="light-el" min="-30" max="88" step="1" value="45" />
+            </label>
+            <label class="row slider">
+              <span>Fill <b id="light-fill-val">0.60</b></span>
+              <input type="range" id="light-fill" min="0" max="4" step="0.05" value="0.6" />
+            </label>
+            <label class="row slider">
+              <span>Ambient <b id="light-env-val">0.85</b></span>
+              <input type="range" id="light-env" min="0" max="3" step="0.05" value="0.85" />
+            </label>
+            <label class="row slider">
+              <span>Exposure <b id="light-exp-val">1.00</b></span>
+              <input type="range" id="light-exp" min="0.2" max="3" step="0.01" value="1" />
+            </label>
+
+            <label class="row check">
+              <span>Shadows</span>
+              <input type="checkbox" id="light-shadows" checked />
+            </label>
+            <label class="row slider">
+              <span>Shadow softness <b id="light-soft-val">3.0</b></span>
+              <input type="range" id="light-soft" min="0" max="12" step="0.5" value="3" />
+            </label>
+            <label class="row slider">
+              <span>Ground shadow <b id="light-shopacity-val">0.35</b></span>
+              <input type="range" id="light-shopacity" min="0" max="1" step="0.01" value="0.35" />
+            </label>
+            <label class="row check">
+              <span>Ground plane that catches the shadow</span>
+              <input type="checkbox" id="light-ground" checked />
+            </label>
+          </div>
+        </details>
+
+        <!-- ---------------- DATA ---------------- -->
+        <details class="group">
+          <summary>Data</summary>
+          <div class="group-body">
+            <div class="btn-row">
+              <button id="cfg-export" class="btn">Export JSON</button>
+              <button id="cfg-import" class="btn">Import JSON</button>
+            </div>
+            <div class="btn-row">
+              <button id="cfg-reset" class="btn">Reset</button>
+              <button id="shot" class="btn">PNG snapshot</button>
+            </div>
+            <input type="file" id="cfg-file" accept="application/json,.json" hidden />
+            <p class="hint">
+              You can also drive it from the console with
+              <code>window.heatmap</code> (see <code>README.md</code>).
+            </p>
+          </div>
+        </details>
+      </div>
+    </aside>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
