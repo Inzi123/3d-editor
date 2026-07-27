@@ -250,6 +250,18 @@
               <input type="checkbox" id="grid-on" checked />
             </label>
             <label class="row">
+              <span>Pattern</span>
+              <select id="grid-source">
+                <option value="lines">Procedural lines</option>
+                <option value="pattern">Texture (hex weave)</option>
+              </select>
+            </label>
+            <div class="btn-row">
+              <button id="grid-load" class="btn">Load another pattern…</button>
+            </div>
+            <input type="file" id="grid-file" accept="image/png,image/webp" hidden />
+
+            <label class="row">
               <span>Projection</span>
               <select id="grid-mode">
                 <option value="triplanar">Model 3D space</option>

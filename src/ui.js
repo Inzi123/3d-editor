@@ -194,6 +194,22 @@ export class EditorUI {
 
     $('grid-style').addEventListener('change', (e) => hm.set('gridStyle', Number(e.target.value)));
 
+    $('grid-source').addEventListener('change', (e) => {
+      if (e.target.value === 'pattern' && !hm.gridTexture) {
+        e.target.value = 'lines';
+        this.flash('Load a pattern image first');
+        return;
+      }
+      hm.set('gridSource', e.target.value);
+      this._gridSourceHint();
+    });
+    $('grid-load').addEventListener('click', () => $('grid-file').click());
+    $('grid-file').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (file) await this.loadGridPattern(URL.createObjectURL(file));
+      e.target.value = '';
+    });
+
     $('grid-mode').addEventListener('change', (e) => {
       hm.set('gridMode', e.target.value);
       this._gridModeHint();
@@ -201,6 +217,25 @@ export class EditorUI {
     $('grid-on').addEventListener('change', (e) => hm.set('gridOn', e.target.checked));
     $('grid-zone-only').addEventListener('change', (e) => hm.set('gridZoneOnly', e.target.checked));
     $('grid-color').addEventListener('input', (e) => hm.set('gridColor', e.target.value));
+  }
+
+  /** Loads a tileable pattern and switches the grid over to it. */
+  async loadGridPattern(url) {
+    try {
+      this.heatmap.setGridTexture(await this.viewer.loadGridTexture(url));
+      this.heatmap.set('gridSource', 'pattern');
+      this.refreshAll();
+      return true;
+    } catch (err) {
+      this.flash(`Could not load the pattern: ${err.message}`);
+      return false;
+    }
+  }
+
+  _gridSourceHint() {
+    const usingPattern = this.heatmap.settings.gridSource === 'pattern';
+    $('grid-width').disabled = usingPattern; // the pattern carries its own line width
+    $('grid-style').disabled = usingPattern;
   }
 
   _gridModeHint() {
@@ -732,6 +767,8 @@ export class EditorUI {
     $('grid-zone-only').checked = s.gridZoneOnly;
     $('grid-color').value = s.gridColor;
     $('grid-mode').value = s.gridMode;
+    $('grid-source').value = this.heatmap.gridTexture ? s.gridSource : 'lines';
+    this._gridSourceHint();
     $('grid-style').value = String(s.gridStyle);
     this.sGridRot.set(s.gridRotation);
     this.sGridAspect.set(s.gridAspect);

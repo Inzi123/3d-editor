@@ -54,21 +54,40 @@ uniform int   uGridZoneOnly;
 uniform float uGridRotation;   // radians
 uniform float uGridAspect;     // >1 stretches the cell vertically
 uniform int   uGridStyle;      // 0 square, 1 horizontal only, 2 vertical only
+uniform sampler2D uGridMap;   // tileable pattern, alpha = line coverage
+uniform int   uGridUseMap;    // 1 = sample the pattern instead of drawing lines
 varying vec3  vHeatNormal;
 
-/** Cell lines over a 2D plane, with the width measured in screen space. */
-float heatGridLines(vec2 q, float width) {
+/** Applies aspect and rotation, shared by both grid sources. */
+vec2 heatGridUv(vec2 q) {
   q *= vec2(1.0, uGridAspect);
   float c = cos(uGridRotation);
   float s = sin(uGridRotation);
-  q = mat2(c, -s, s, c) * q;
+  return mat2(c, -s, s, c) * q;
+}
 
+/** Cell lines over a 2D plane, with the width measured in screen space. */
+float heatGridLines(vec2 q, float width) {
+  q = heatGridUv(q);
   vec2 cell = abs(fract(q) - 0.5);
   float d = uGridStyle == 1 ? cell.y
           : uGridStyle == 2 ? cell.x
           : min(cell.x, cell.y);   // 0 on a line, 0.5 at the cell center
   float aa = fwidth(d);            // how much d changes from one pixel to the next
   return 1.0 - smoothstep(width, width + aa + 0.004, d);
+}
+
+/**
+ * Coverage taken from the tileable pattern. The alpha channel carries the weave,
+ * so only that is read; the color stays under the panel's control.
+ */
+float heatGridPattern(vec2 q) {
+  return texture2D(uGridMap, heatGridUv(q)).a;
+}
+
+/** Either source, so the triplanar blend does not care which one is active. */
+float heatGridAt(vec2 q, float width) {
+  return uGridUseMap == 1 ? heatGridPattern(q) : heatGridLines(q, width);
 }
 
 #define HEAT_LUMA(c) dot((c), vec3(0.2126, 0.7152, 0.0722))
@@ -214,11 +233,11 @@ const FRAG_BODY = /* glsl */ `
       vec3 p = vHeatLocal * uGridDensity * uGridWorldScale;
       vec3 w = pow(abs(normalize(vHeatNormal)), vec3(6.0));
       w /= max(w.x + w.y + w.z, 1e-5);
-      line = heatGridLines(p.yz, uGridWidth) * w.x
-           + heatGridLines(p.xz, uGridWidth) * w.y
-           + heatGridLines(p.xy, uGridWidth) * w.z;
+      line = heatGridAt(p.yz, uGridWidth) * w.x
+           + heatGridAt(p.xz, uGridWidth) * w.y
+           + heatGridAt(p.xy, uGridWidth) * w.z;
     } else {
-      line = heatGridLines(vHeatUv * uGridDensity, uGridWidth);
+      line = heatGridAt(vHeatUv * uGridDensity, uGridWidth);
     }
 
     float amount = line * uGridOpacity * (uGridZoneOnly == 1 ? zone : 1.0);
@@ -281,6 +300,8 @@ export class HeatmapLayer {
       gridRotation: 0,
       gridAspect: 1,
       gridStyle: 0,
+      // 'pattern' samples a tileable image, 'lines' draws them mathematically
+      gridSource: 'lines',
       // Markers: a screen space UI overlay. The structure is dot, gap and outer
       // ring; both share one color.
       markOn: true,
@@ -302,6 +323,7 @@ export class HeatmapLayer {
     );
     this._emptyZone.needsUpdate = true;
     this.zoneTexture = null;
+    this.gridTexture = null;
 
     this.uniforms = {
       uHeatPoints: { value: new Float32Array(MAX_POINTS * 4) },
@@ -338,6 +360,8 @@ export class HeatmapLayer {
       uGridRotation: { value: 0 },
       uGridAspect: { value: this.settings.gridAspect },
       uGridStyle: { value: this.settings.gridStyle },
+      uGridMap: { value: this._emptyZone },
+      uGridUseMap: { value: 0 },
     };
 
     this.onChange = null;
@@ -466,6 +490,7 @@ export class HeatmapLayer {
       this.uniforms.uHeatColorMode.value = value === 'perPoint' ? 1 : 0;
     }
     if (key === 'gridOn') this.uniforms.uGridOn.value = value ? 1 : 0;
+    if (key === 'gridSource') this._refreshGridSource();
     if (key === 'gridMode') this.uniforms.uGridMode.value = value === 'triplanar' ? 1 : 0;
     if (key === 'gridZoneOnly') this.uniforms.uGridZoneOnly.value = value ? 1 : 0;
     if (key === 'gridColor') {
@@ -488,6 +513,23 @@ export class HeatmapLayer {
       this.uniforms.uZoneArmor.value.setStyle(value, THREE.SRGBColorSpace);
     }
     if (key === 'sizeScale') this.sync();
+    this.onChange?.();
+  }
+
+  _refreshGridSource() {
+    const usable = this.settings.gridSource === 'pattern' && !!this.gridTexture;
+    this.uniforms.uGridUseMap.value = usable ? 1 : 0;
+  }
+
+  /**
+   * Binds the tileable grid pattern. Only its alpha is read, so the panel keeps
+   * control of the color; passing null falls back to the procedural lines.
+   */
+  setGridTexture(texture) {
+    if (this.gridTexture && this.gridTexture !== texture) this.gridTexture.dispose();
+    this.gridTexture = texture || null;
+    this.uniforms.uGridMap.value = texture || this._emptyZone;
+    this._refreshGridSource();
     this.onChange?.();
   }
 

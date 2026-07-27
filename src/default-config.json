@@ -20,10 +20,10 @@
     "zoneDebug": false,
     "gridOn": true,
     "gridMode": "triplanar",
-    "gridDensity": 91,
+    "gridDensity": 6,
     "gridWidth": 0.062,
     "gridColor": "#ffffff",
-    "gridOpacity": 0.12,
+    "gridOpacity": 0.85,
     "gridZoneOnly": true,
     "gridRotation": 0,
     "gridAspect": 1,
@@ -35,7 +35,8 @@
     "markColor": "#ffffff",
     "markUsePain": false,
     "markOpacity": 1,
-    "markHideBehind": false
+    "markHideBehind": false,
+    "gridSource": "pattern"
   },
   "presetId": "classic",
   "stops": [

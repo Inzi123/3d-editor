@@ -263,6 +263,21 @@ export class Viewer {
     return tex;
   }
 
+  /**
+   * Loads the tileable grid pattern. Repeat wrapping is what makes the tiling
+   * work, and max anisotropy keeps the weave from turning to mush at grazing
+   * angles, which is where a fine pattern falls apart first.
+   */
+  async loadGridTexture(url) {
+    const tex = await new THREE.TextureLoader().loadAsync(url);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    tex.needsUpdate = true;
+    return tex;
+  }
+
   // ---- lighting -----------------------------------------------------------
 
   setLight(key, value) {

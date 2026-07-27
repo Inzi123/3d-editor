@@ -6,6 +6,7 @@ import { EditorUI } from './ui.js';
 import defaultConfig from './default-config.json';
 
 const MODEL_URL = 'models/astronaut.glb';
+const GRID_PATTERN_URL = 'textures/mesh-pattern.png';
 
 const canvas = document.getElementById('view');
 const loader = document.getElementById('loader');
@@ -28,6 +29,14 @@ async function boot() {
   const info = await viewer.load(MODEL_URL, progress);
 
   const ui = new EditorUI(heatmap, viewer);
+
+  // The tileable weave, if it ships with the project. It is bound before the
+  // config so a config asking for gridSource: 'pattern' finds it already there.
+  try {
+    heatmap.setGridTexture(await viewer.loadGridTexture(GRID_PATTERN_URL));
+  } catch {
+    /* no pattern shipped: the grid falls back to the procedural lines */
+  }
 
   try {
     ui.applyConfig(defaultConfig);

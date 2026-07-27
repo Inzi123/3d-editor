@@ -134,10 +134,17 @@ active the fabric is already forced to a flat color in the shader.
 
 ### Suit grid
 
-The grid is not a texture: it is drawn mathematically in the fragment shader. A 1 px
-line in a map is lost when the model shrinks on screen (minification); this one stays
-crisp at any distance because the width is computed in screen space with `fwidth`,
-which also prevents shimmering while rotating or zooming out.
+Two sources, switchable in the panel:
+
+**Texture (hex weave)** — a small tileable image, sampled for its alpha channel only,
+so the color and opacity stay under the panel's control. `public/textures/mesh-pattern.png`
+is the one that ships (270×350, 27 KB). `Load another pattern…` swaps it for any other
+tileable PNG or WebP.
+
+**Procedural lines** — drawn mathematically in the fragment shader. A 1 px line in a
+map is lost when the model shrinks on screen (minification); this one stays crisp at
+any distance because the width is computed in screen space with `fwidth`, which also
+prevents shimmering while rotating or zooming out.
 
 ```glsl
 vec2 cell = abs(fract(q) - 0.5);
@@ -146,29 +153,34 @@ float aa  = fwidth(d);             // how much d changes between adjacent pixels
 float line = 1.0 - smoothstep(uGridWidth, uGridWidth + aa + 0.004, d);
 ```
 
-**Where `q` comes from matters a lot here.** There are two modes:
+**Where `q` comes from matters a lot here**, whichever source is active. There are two
+projections:
 
-- **Model 3D space** (default) — triplanar: the cell is defined in model space and
+- **Model 3D space** (default) — triplanar: the pattern is sampled in model space and
   projected from the three axes, weighted by the normal. Same size and orientation
   across the whole body, no seams.
 - **Texture UVs** — the direct approach, and the one that works on models with a tidy
-  unwrap. On this one it **does not**: the UVs are auto generated islands, each with
-  its own orientation and density, so the grid comes out rotated differently on every
-  part and with cells of different sizes.
+  unwrap. On this one it **does not**: the UVs are auto generated islands, each with its
+  own orientation and density, so the pattern comes out rotated differently on every
+  part and at different sizes.
 
-The cost of triplanar is that on surfaces at ~45° to the axes the three projections
-blend and the line softens a little. It shows slightly on the edge of the arms. The
-weight exponent (`pow(n, 6.0)`) tunes that trade-off: higher means a harder
-transition but crisper lines.
+Triplanar is what makes a tileable pattern usable here at all: it needs no UV layout of
+its own, so a weave authored in Blender against a completely different unwrap still maps
+cleanly onto this mesh.
 
-Density means the same thing in both modes — cells across the model's height —
-because triplanar scales the position by `uGridWorldScale`, which the viewer derives
-from the bounding box.
+The cost is that on surfaces at ~45° to the axes the three projections blend and the
+pattern softens a little. It shows slightly on the edge of the arms. The weight exponent
+(`pow(n, 6.0)`) tunes that trade-off.
 
-It composes last, on top of the heatmap. Controls: projection, density, line width,
-color, opacity, `Only over the heat zone` so it does not invade the armor, plus
-**style** (square / horizontal only / vertical only), **rotation** and **cell aspect**
-to stretch cells taller or wider. Rotating 45° gives diamonds.
+Density means the same thing in both projections — repeats across the model's height —
+because triplanar scales the position by `uGridWorldScale`, which the viewer derives from
+the bounding box.
+
+It composes last, on top of the heatmap. Controls: pattern source, projection, density,
+color, opacity and `Only over the heat zone` so it does not invade the armor. With
+procedural lines there are also line width, **style** (square / horizontal only /
+vertical only), **rotation** and **cell aspect**; those two are disabled with a texture
+pattern, which carries its own line shape.
 
 ### Zones (chroma key)
 
