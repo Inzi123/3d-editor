@@ -370,7 +370,7 @@
           <div class="group-body">
             <label class="row slider">
               <span>Intensity <b id="light-key-val">2.40</b></span>
-              <input type="range" id="light-key" min="0" max="8" step="0.05" value="2.4" />
+              <input type="range" id="light-key" min="0" max="30" step="0.1" value="2.4" />
             </label>
             <label class="row">
               <span>Light color</span>
@@ -386,7 +386,7 @@
             </label>
             <label class="row slider">
               <span>Fill <b id="light-fill-val">0.60</b></span>
-              <input type="range" id="light-fill" min="0" max="4" step="0.05" value="0.6" />
+              <input type="range" id="light-fill" min="0" max="12" step="0.05" value="0.6" />
             </label>
             <label class="row slider">
               <span>Ambient <b id="light-env-val">0.85</b></span>
@@ -394,8 +394,13 @@
             </label>
             <label class="row slider">
               <span>Exposure <b id="light-exp-val">1.00</b></span>
-              <input type="range" id="light-exp" min="0.2" max="3" step="0.01" value="1" />
+              <input type="range" id="light-exp" min="0.2" max="4" step="0.01" value="1" />
             </label>
+            <p class="hint">
+              For overall brightness, exposure beats intensity by a wide margin: the key
+              light saturates into the ACES tone mapping shoulder, so past ~10 it buys
+              directional contrast rather than light.
+            </p>
 
             <label class="row check">
               <span>Shadows</span>

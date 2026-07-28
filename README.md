@@ -225,6 +225,13 @@ The lights are neutral by default on purpose: a tinted light skews how the heatm
 colors read. `Fill` and `Ambient` control how far the shadows close up — drop them to
 near zero to see the real contrast.
 
+**For overall brightness, reach for exposure rather than intensity.** The key light
+saturates into the ACES tone mapping shoulder well before the top of its range: measured
+on this scene, going from intensity 8 to 30 (3.75x the light) raised the model's mean
+luminance only from 0.531 to 0.610, while exposure 0.59 to 1.3 took it to 0.712. Nothing
+clips in either case. Past roughly 10, intensity buys directional contrast between the
+lit and unlit sides, not light.
+
 ### Data
 
 Export/import the full configuration as JSON and grab a PNG snapshot. `Reset` returns

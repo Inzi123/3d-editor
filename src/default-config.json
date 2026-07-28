@@ -260,7 +260,7 @@
     }
   ],
   "lighting": {
-    "keyIntensity": 8,
+    "keyIntensity": 14,
     "keyColor": "#ffffff",
     "azimuth": 96,
     "elevation": 1,
