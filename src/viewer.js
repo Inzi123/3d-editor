@@ -68,7 +68,9 @@ export class Viewer {
     // otherwise turning AO on would visibly jag every silhouette.
     this.composerTarget = new THREE.WebGLRenderTarget(1, 1, {
       type: THREE.HalfFloatType,
-      samples: 4,
+      samples: Math.min(8, this.renderer.getContext().getParameter(
+        this.renderer.getContext().MAX_SAMPLES
+      ) || 4),
     });
     this.composer = new EffectComposer(this.renderer, this.composerTarget);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -174,7 +176,10 @@ export class Viewer {
       mesh.castShadow = true;
       mesh.receiveShadow = true; // self shadowing: the arms onto the torso
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      mats.forEach((m) => this.heatmap.attach(m));
+      mats.forEach((m) => {
+        this._sharpenTextures(m);
+        this.heatmap.attach(m);
+      });
     }
 
     this.model = root;
@@ -193,6 +198,22 @@ export class Viewer {
     this.applyLighting(); // now that the real model size is known
     this.frame();
     return { size, triangles: this._countTriangles() };
+  }
+
+  /**
+   * GLTFLoader leaves every texture at anisotropy 1. That blurs them at grazing
+   * angles, and here it costs double: the base texture is what feeds the chroma
+   * key, so a mushy sample makes the armor/fabric boundary crawl as the camera
+   * moves.
+   */
+  _sharpenTextures(material) {
+    const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    for (const slot of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap']) {
+      const tex = material[slot];
+      if (!tex || tex.anisotropy >= maxAnisotropy) continue;
+      tex.anisotropy = maxAnisotropy;
+      tex.needsUpdate = true;
+    }
   }
 
   /**
