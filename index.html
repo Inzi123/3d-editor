@@ -390,7 +390,7 @@
             </label>
             <label class="row slider">
               <span>Ambient <b id="light-env-val">0.85</b></span>
-              <input type="range" id="light-env" min="0" max="3" step="0.05" value="0.85" />
+              <input type="range" id="light-env" min="0" max="30" step="0.1" value="0.85" />
             </label>
             <label class="row slider">
               <span>Exposure <b id="light-exp-val">1.00</b></span>
@@ -423,7 +423,7 @@
               <span>Environment</span>
               <select id="light-env-map">
                 <option value="studio">Synthetic studio</option>
-                <option value="hdri">HDRI (nebulae)</option>
+                <option value="hdri">HDRI (night sky)</option>
               </select>
             </label>
             <label class="row check">
@@ -439,9 +439,9 @@
               <input type="range" id="light-bgblur" min="0" max="1" step="0.01" value="0.1" />
             </label>
             <p class="hint">
-              Lighting and backdrop are separate. A nebula plate is a fine backdrop and
-              a useless light: this one averages 0.0016 luminance, so as an environment
-              it leaves the shadow side of the model black.
+              Lighting and backdrop are separate settings. A night sky averages far less
+              luminance than a studio, so it needs a much higher ambient to light the
+              model the same — around 16 here rather than 0.4.
             </p>
 
             <label class="row check">

@@ -7,7 +7,7 @@ import defaultConfig from './default-config.json';
 
 const MODEL_URL = 'models/astronaut.glb';
 const GRID_PATTERN_URL = 'textures/mesh-pattern.png';
-const ENVIRONMENT_URL = 'env/nebulae.hdr';
+const ENVIRONMENT_URL = 'env/night-sky.exr';
 
 const canvas = document.getElementById('view');
 const loader = document.getElementById('loader');

@@ -234,30 +234,36 @@ lit and unlit sides, not light.
 
 ### Environment and backdrop
 
-**Lighting and backdrop are separate settings on purpose.** The environment map lights
-the model; the backdrop is what sits behind it. They are usually the same image, but
-they do not have to be, and here they should not be.
+`public/env/night-sky.exr` lights the model and sits behind it. Both `.exr` and `.hdr`
+load; the loader is chosen from the extension and imported on demand.
 
-The shipped `public/env/nebulae.hdr` makes a good backdrop and a useless light. Measured
-on the source: mean luminance **0.0016**, with **99.8% of its pixels below 0.01** and a
-maximum of 0.996 — it never even exceeds 1, so it carries no high dynamic range at all.
-It is a dark plate saved in HDR format.
+**Lighting and backdrop are separate settings on purpose.** They are usually the same
+image, but they do not have to be, and an HDRI that works as one may be useless as the
+other.
 
-With the key light switched off, lighting purely from the environment, the studio map
-gives a model brightness of 0.37 and the nebula gives **0.000**. Used as the environment
-it leaves the shadow side of the model black: 56% of the model becomes too dark to read
-the heat color, against 5.4% with the studio map. Raising ambient does not rescue it —
-even at 75x the default it only moves that to 55.4%, because there is no light there to
-amplify.
+The number that decides it is the map's mean luminance, and it sets how much ambient
+the map needs to light the model:
 
-So the default is the synthetic studio environment for lighting, with the nebula as the
-backdrop. `Backdrop brightness` scales it independently, since at 1.0 the plate is
-effectively black.
+| Map | Mean luminance | Pixels below 0.01 | Ambient needed |
+| --- | --- | --- | --- |
+| Synthetic studio | — | — | 0.4 |
+| Night sky | 0.0326 | 0.1% | **16** |
+| A nebula plate tried earlier | 0.0016 | 99.8% | no value works |
 
-`tools/resize_hdr.py` downsizes an HDRI, decoding and downsampling in one pass so a 67 MB
-8K source never needs its 400 MB of float RGB in memory. It ships at 1024x512 and 1.67 MB:
-as a blurred backdrop nothing is gained past that, and for image based lighting three
-reduces the map to a 256 px cubemap regardless.
+At ambient 16 the night sky gives a model brightness of 0.503 with 5.9% of it too dark
+to read the heat — effectively the same as the studio's 0.534 and 5.4%, but now lit by
+a real sky. The nebula never got there: lighting purely from the environment it produced
+a brightness of 0.000, and even at 75x the default ambient it left more than half the
+model unreadable, because there was no light in it to amplify.
+
+So if you swap the HDRI and the model goes dark, the ambient slider is what you want,
+and it may need to go far above 1.
+
+`tools/resize_hdr.py` handles Radiance `.hdr` files, implementing the RGBE codec since no
+HDR library ships with Python. It decodes and downsamples in one pass, so an 8K source
+never needs its 400 MB of float RGB in memory. For image based lighting three reduces
+whatever you give it to a 256 px cubemap, so past 1K the only thing more resolution buys
+is a sharper backdrop.
 
 ### Ambient occlusion
 

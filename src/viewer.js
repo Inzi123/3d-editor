@@ -212,14 +212,20 @@ export class Viewer {
   }
 
   /**
-   * Loads an equirectangular .hdr and prefilters it into an environment map.
+   * Loads an equirectangular HDRI and prefilters it into an environment map.
+   * Accepts .exr and .hdr; the loader is picked from the extension and imported
+   * on demand, so a project shipping neither pays for neither.
    *
    * The raw map is kept around too: PMREM output is a cubemap tuned for lighting
    * and looks wrong used directly as a backdrop.
    */
   async loadEnvironment(url) {
-    const { RGBELoader } = await import('three/addons/loaders/RGBELoader.js');
-    const equirect = await new RGBELoader().loadAsync(url);
+    const isExr = /\.exr(\?|$)/i.test(url);
+    const { EXRLoader, RGBELoader } = isExr
+      ? await import('three/addons/loaders/EXRLoader.js')
+      : await import('three/addons/loaders/RGBELoader.js');
+    const loader = new (isExr ? EXRLoader : RGBELoader)();
+    const equirect = await loader.loadAsync(url);
     equirect.mapping = THREE.EquirectangularReflectionMapping;
 
     this.environments.hdri?.dispose();

@@ -265,7 +265,7 @@
     "azimuth": 96,
     "elevation": 1,
     "fillIntensity": 0,
-    "envIntensity": 0.4,
+    "envIntensity": 16,
     "exposure": 0.59,
     "shadows": true,
     "shadowSoftness": 12,
@@ -274,9 +274,9 @@
     "ao": true,
     "aoRadius": 0.4,
     "aoIntensity": 1,
-    "environment": "studio",
+    "environment": "hdri",
     "background": true,
-    "backgroundBlur": 0.1,
-    "backgroundIntensity": 10
+    "backgroundBlur": 0,
+    "backgroundIntensity": 1
   }
 }
