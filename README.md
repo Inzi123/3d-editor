@@ -232,6 +232,27 @@ luminance only from 0.531 to 0.610, while exposure 0.59 to 1.3 took it to 0.712.
 clips in either case. Past roughly 10, intensity buys directional contrast between the
 lit and unlit sides, not light.
 
+### Ambient occlusion
+
+`GTAOPass` running in an `EffectComposer`, which darkens creases and contact areas —
+the armor against the fabric, the inside of an elbow, under the collar.
+
+Two things this needed that are easy to miss:
+
+- **The composer target is multisampled by hand** (`samples: 4`). Adding a post pass
+  gives up the renderer's own MSAA, so without that, turning AO on visibly jags every
+  silhouette.
+- **The background moved to CSS** and the canvas renders with alpha. A `scene.background`
+  color goes through tone mapping on the composer path but not on the direct one, so
+  toggling AO used to change the backdrop color.
+
+`AO radius` is a fraction of the model size rather than world units, so the setting
+reads the same whatever scale the model is at.
+
+Measured on this model: mean darkening of 1.15% with peaks of 22%, reaching 7.8% of the
+model's pixels. That is on the subtle side, and it is honest — a smooth bodysuit has few
+deep creases for AO to find. It shows most where the armor meets the fabric.
+
 ### Data
 
 Export/import the full configuration as JSON and grab a PNG snapshot. `Reset` returns

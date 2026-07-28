@@ -418,6 +418,24 @@
               <span>Ground plane that catches the shadow</span>
               <input type="checkbox" id="light-ground" checked />
             </label>
+
+            <label class="row check">
+              <span>Ambient occlusion</span>
+              <input type="checkbox" id="light-ao" checked />
+            </label>
+            <label class="row slider">
+              <span>AO radius <b id="light-aorad-val">0.25</b></span>
+              <input type="range" id="light-aorad" min="0.02" max="1" step="0.01" value="0.25" />
+            </label>
+            <label class="row slider">
+              <span>AO strength <b id="light-aoint-val">1.00</b></span>
+              <input type="range" id="light-aoint" min="0" max="2" step="0.01" value="1" />
+            </label>
+            <p class="hint">
+              Darkens creases and contact areas — the armor against the fabric, the
+              inside of the elbows. Radius is a fraction of the model, so it reads the
+              same whatever the scale.
+            </p>
           </div>
         </details>
 

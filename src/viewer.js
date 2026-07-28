@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const DRAG_THRESHOLD_PX = 5;
 
@@ -10,15 +14,17 @@ export class Viewer {
     this.canvas = canvas;
     this.heatmap = heatmap;
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    // alpha: true leaves the background to CSS. Painting it into the scene means
+    // it goes through tone mapping on the composer path but not on the direct one,
+    // so turning AO on would visibly change the backdrop color.
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#12141c');
+    this.scene = new THREE.Scene(); // background lives in CSS, see #view in style.css
 
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
     this.camera.position.set(0, 0.4, 3);
@@ -57,6 +63,20 @@ export class Viewer {
     this.ground.receiveShadow = true;
     this.scene.add(this.ground);
 
+    // Ambient occlusion. It runs as a post pass, which means giving up the
+    // renderer's own MSAA -- so the composer target is multisampled by hand,
+    // otherwise turning AO on would visibly jag every silhouette.
+    this.composerTarget = new THREE.WebGLRenderTarget(1, 1, {
+      type: THREE.HalfFloatType,
+      samples: 4,
+    });
+    this.composer = new EffectComposer(this.renderer, this.composerTarget);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.gtao = new GTAOPass(this.scene, this.camera, 1, 1);
+    this.gtao.blendIntensity = 1;
+    this.composer.addPass(this.gtao);
+    this.composer.addPass(new OutputPass());
+
     this.lighting = {
       keyIntensity: 2.4,
       keyColor: '#ffffff',
@@ -69,6 +89,9 @@ export class Viewer {
       shadowSoftness: 3,
       shadowOpacity: 0.35,
       ground: true,
+      ao: true,
+      aoRadius: 0.25, // fraction of the model size, see applyLighting
+      aoIntensity: 1,
     };
     this.applyLighting();
 
@@ -339,6 +362,18 @@ export class Viewer {
     this.ground.material.opacity = L.shadowOpacity;
     this.ground.scale.setScalar(radius * 12);
     this.ground.position.y = (this.modelBottom ?? -radius) - radius * 0.005;
+
+    this.gtao.enabled = L.ao;
+    this.gtao.blendIntensity = L.aoIntensity;
+    // The AO radius is in world units, so it is expressed as a fraction of the
+    // model: the same setting then reads the same on a model of any scale.
+    this.gtao.updateGtaoMaterial({
+      radius: Math.max(L.aoRadius * radius, 1e-3),
+      distanceExponent: 1,
+      thickness: radius * 0.5,
+      scale: 1,
+      samples: 16,
+    });
   }
 
   _countTriangles() {
@@ -523,7 +558,18 @@ export class Viewer {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    // the composer works in device pixels, not CSS pixels
+    const dpr = this.renderer.getPixelRatio();
+    this.composer.setSize(w, h);
+    this.composer.setPixelRatio(dpr);
+    this.gtao.setSize(w * dpr, h * dpr);
     this._rect = this.canvas.getBoundingClientRect();
+  }
+
+  /** Single entry point so every caller gets the same path, AO on or off. */
+  render() {
+    if (this.lighting.ao) this.composer.render();
+    else this.renderer.render(this.scene, this.camera);
   }
 
   start() {
@@ -541,7 +587,7 @@ export class Viewer {
       }
 
       this.controls.update();
-      this.renderer.render(this.scene, this.camera);
+      this.render();
       this.updateMarkers();
     };
     tick();

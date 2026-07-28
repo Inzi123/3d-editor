@@ -262,6 +262,10 @@ export class EditorUI {
     this.sShOpacity = this._slider('light-shopacity', 'light-shopacity-val',
       (x) => v.setLight('shadowOpacity', x));
 
+    this.sAoRad = this._slider('light-aorad', 'light-aorad-val', (x) => v.setLight('aoRadius', x));
+    this.sAoInt = this._slider('light-aoint', 'light-aoint-val', (x) => v.setLight('aoIntensity', x));
+    $('light-ao').addEventListener('change', (e) => v.setLight('ao', e.target.checked));
+
     $('light-color').addEventListener('input', (e) => v.setLight('keyColor', e.target.value));
     $('light-shadows').addEventListener('change', (e) => v.setLight('shadows', e.target.checked));
     $('light-ground').addEventListener('change', (e) => v.setLight('ground', e.target.checked));
@@ -692,7 +696,7 @@ export class EditorUI {
 
     $('shot').addEventListener('click', () => {
       const v = this.viewer;
-      v.renderer.render(v.scene, v.camera);
+      v.render();
       const a = document.createElement('a');
       a.href = v.renderer.domElement.toDataURL('image/png');
       a.download = 'heatmap.png';
@@ -792,9 +796,12 @@ export class EditorUI {
     this.sExp.set(L.exposure);
     this.sSoft.set(L.shadowSoftness);
     this.sShOpacity.set(L.shadowOpacity);
+    this.sAoRad.set(L.aoRadius);
+    this.sAoInt.set(L.aoIntensity);
     $('light-color').value = L.keyColor;
     $('light-shadows').checked = L.shadows;
     $('light-ground').checked = L.ground;
+    $('light-ao').checked = L.ao;
 
     $('zone-tol').value = String(s.zoneTol);
     $('zone-tol-val').textContent = s.zoneTol.toFixed(2);

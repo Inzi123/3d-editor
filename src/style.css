@@ -33,6 +33,8 @@ body {
   height: 100%;
   display: block;
   touch-action: none;
+  /* the canvas renders with alpha so the backdrop never goes through tone mapping */
+  background: #12141c;
 }
 
 /* ---------------- loader ---------------- */
