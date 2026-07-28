@@ -7,6 +7,7 @@ import defaultConfig from './default-config.json';
 
 const MODEL_URL = 'models/astronaut.glb';
 const GRID_PATTERN_URL = 'textures/mesh-pattern.png';
+const ENVIRONMENT_URL = 'env/nebulae.hdr';
 
 const canvas = document.getElementById('view');
 const loader = document.getElementById('loader');
@@ -36,6 +37,14 @@ async function boot() {
     heatmap.setGridTexture(await viewer.loadGridTexture(GRID_PATTERN_URL));
   } catch {
     /* no pattern shipped: the grid falls back to the procedural lines */
+  }
+
+  // The HDRI environment, if one ships with the project. Loaded before the config
+  // so a config asking for environment: 'hdri' finds it already prefiltered.
+  try {
+    await viewer.loadEnvironment(ENVIRONMENT_URL);
+  } catch {
+    /* no HDRI shipped: the synthetic studio environment stays */
   }
 
   try {

@@ -35,9 +35,13 @@ export class Viewer {
     this.controls.minDistance = 0.2;
     this.controls.maxDistance = 30;
 
-    const pmrem = new THREE.PMREMGenerator(this.renderer);
-    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    pmrem.dispose();
+    this._pmrem = new THREE.PMREMGenerator(this.renderer);
+    this._pmrem.compileEquirectangularShader();
+    this.environments = {
+      studio: this._pmrem.fromScene(new RoomEnvironment(), 0.04).texture,
+    };
+    this.scene.environment = this.environments.studio;
+    this._equirect = null; // raw map, kept for use as a backdrop
 
     // Key light: the only one that casts a shadow.
     this.keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
@@ -94,6 +98,13 @@ export class Viewer {
       ao: true,
       aoRadius: 0.25, // fraction of the model size, see applyLighting
       aoIntensity: 1,
+      // Lighting and backdrop are independent on purpose: a nebula plate makes a
+      // good backdrop and a useless light source, so you usually want the studio
+      // environment lighting the model while the HDRI sits behind it.
+      environment: 'studio', // or 'hdri', once one is loaded
+      background: false,
+      backgroundBlur: 0.1,
+      backgroundIntensity: 1,
     };
     this.applyLighting();
 
@@ -198,6 +209,27 @@ export class Viewer {
     this.applyLighting(); // now that the real model size is known
     this.frame();
     return { size, triangles: this._countTriangles() };
+  }
+
+  /**
+   * Loads an equirectangular .hdr and prefilters it into an environment map.
+   *
+   * The raw map is kept around too: PMREM output is a cubemap tuned for lighting
+   * and looks wrong used directly as a backdrop.
+   */
+  async loadEnvironment(url) {
+    const { RGBELoader } = await import('three/addons/loaders/RGBELoader.js');
+    const equirect = await new RGBELoader().loadAsync(url);
+    equirect.mapping = THREE.EquirectangularReflectionMapping;
+
+    this.environments.hdri?.dispose();
+    this.environments.hdri = this._pmrem.fromEquirectangular(equirect).texture;
+    this._equirect?.dispose();
+    this._equirect = equirect;
+
+    this.lighting.environment = 'hdri';
+    this.applyLighting();
+    return { width: equirect.image.width, height: equirect.image.height };
   }
 
   /**
@@ -376,8 +408,16 @@ export class Viewer {
     cam.updateProjectionMatrix();
 
     this.fillLight.intensity = L.fillIntensity;
+    this.scene.environment = this.environments[L.environment] || this.environments.studio;
     this.scene.environmentIntensity = L.envIntensity;
     this.renderer.toneMappingExposure = L.exposure;
+
+    // A texture backdrop is fine on both render paths because it is drawn as
+    // geometry and tone mapped either way -- unlike a flat clear color, which is
+    // why the plain background lives in CSS.
+    this.scene.background = L.background && this._equirect ? this._equirect : null;
+    this.scene.backgroundBlurriness = L.backgroundBlur;
+    this.scene.backgroundIntensity = L.backgroundIntensity;
 
     this.ground.visible = L.ground && L.shadows;
     this.ground.material.opacity = L.shadowOpacity;

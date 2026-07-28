@@ -266,6 +266,20 @@ export class EditorUI {
     this.sAoInt = this._slider('light-aoint', 'light-aoint-val', (x) => v.setLight('aoIntensity', x));
     $('light-ao').addEventListener('change', (e) => v.setLight('ao', e.target.checked));
 
+    this.sBgBlur = this._slider('light-bgblur', 'light-bgblur-val',
+      (x) => v.setLight('backgroundBlur', x));
+    this.sBgInt = this._slider('light-bgint', 'light-bgint-val',
+      (x) => v.setLight('backgroundIntensity', x));
+    $('light-env-map').addEventListener('change', (e) => {
+      if (e.target.value === 'hdri' && !v.environments.hdri) {
+        e.target.value = 'studio';
+        this.flash('No HDRI loaded');
+        return;
+      }
+      v.setLight('environment', e.target.value);
+    });
+    $('light-bg').addEventListener('change', (e) => v.setLight('background', e.target.checked));
+
     $('light-color').addEventListener('input', (e) => v.setLight('keyColor', e.target.value));
     $('light-shadows').addEventListener('change', (e) => v.setLight('shadows', e.target.checked));
     $('light-ground').addEventListener('change', (e) => v.setLight('ground', e.target.checked));
@@ -802,6 +816,10 @@ export class EditorUI {
     $('light-shadows').checked = L.shadows;
     $('light-ground').checked = L.ground;
     $('light-ao').checked = L.ao;
+    this.sBgBlur.set(L.backgroundBlur);
+    this.sBgInt.set(L.backgroundIntensity);
+    $('light-env-map').value = this.viewer.environments.hdri ? L.environment : 'studio';
+    $('light-bg').checked = L.background;
 
     $('zone-tol').value = String(s.zoneTol);
     $('zone-tol-val').textContent = s.zoneTol.toFixed(2);

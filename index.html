@@ -419,6 +419,31 @@
               <input type="checkbox" id="light-ground" checked />
             </label>
 
+            <label class="row">
+              <span>Environment</span>
+              <select id="light-env-map">
+                <option value="studio">Synthetic studio</option>
+                <option value="hdri">HDRI (nebulae)</option>
+              </select>
+            </label>
+            <label class="row check">
+              <span>Show it as the backdrop</span>
+              <input type="checkbox" id="light-bg" />
+            </label>
+            <label class="row slider">
+              <span>Backdrop brightness <b id="light-bgint-val">1.00</b></span>
+              <input type="range" id="light-bgint" min="0" max="20" step="0.1" value="1" />
+            </label>
+            <label class="row slider">
+              <span>Backdrop blur <b id="light-bgblur-val">0.10</b></span>
+              <input type="range" id="light-bgblur" min="0" max="1" step="0.01" value="0.1" />
+            </label>
+            <p class="hint">
+              Lighting and backdrop are separate. A nebula plate is a fine backdrop and
+              a useless light: this one averages 0.0016 luminance, so as an environment
+              it leaves the shadow side of the model black.
+            </p>
+
             <label class="row check">
               <span>Ambient occlusion</span>
               <input type="checkbox" id="light-ao" checked />

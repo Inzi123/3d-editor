@@ -273,6 +273,10 @@
     "ground": false,
     "ao": true,
     "aoRadius": 0.4,
-    "aoIntensity": 1
+    "aoIntensity": 1,
+    "environment": "studio",
+    "background": true,
+    "backgroundBlur": 0.1,
+    "backgroundIntensity": 10
   }
 }

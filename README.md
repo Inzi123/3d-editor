@@ -232,6 +232,33 @@ luminance only from 0.531 to 0.610, while exposure 0.59 to 1.3 took it to 0.712.
 clips in either case. Past roughly 10, intensity buys directional contrast between the
 lit and unlit sides, not light.
 
+### Environment and backdrop
+
+**Lighting and backdrop are separate settings on purpose.** The environment map lights
+the model; the backdrop is what sits behind it. They are usually the same image, but
+they do not have to be, and here they should not be.
+
+The shipped `public/env/nebulae.hdr` makes a good backdrop and a useless light. Measured
+on the source: mean luminance **0.0016**, with **99.8% of its pixels below 0.01** and a
+maximum of 0.996 — it never even exceeds 1, so it carries no high dynamic range at all.
+It is a dark plate saved in HDR format.
+
+With the key light switched off, lighting purely from the environment, the studio map
+gives a model brightness of 0.37 and the nebula gives **0.000**. Used as the environment
+it leaves the shadow side of the model black: 56% of the model becomes too dark to read
+the heat color, against 5.4% with the studio map. Raising ambient does not rescue it —
+even at 75x the default it only moves that to 55.4%, because there is no light there to
+amplify.
+
+So the default is the synthetic studio environment for lighting, with the nebula as the
+backdrop. `Backdrop brightness` scales it independently, since at 1.0 the plate is
+effectively black.
+
+`tools/resize_hdr.py` downsizes an HDRI, decoding and downsampling in one pass so a 67 MB
+8K source never needs its 400 MB of float RGB in memory. It ships at 1024x512 and 1.67 MB:
+as a blurred backdrop nothing is gained past that, and for image based lighting three
+reduces the map to a 256 px cubemap regardless.
+
 ### Ambient occlusion
 
 `GTAOPass` running in an `EffectComposer`, which darkens creases and contact areas —
