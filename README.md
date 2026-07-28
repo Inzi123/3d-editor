@@ -5,6 +5,9 @@ underneath the armor, plus an editor for placing and tuning the hot spots.
 
 ![preview](preview.png)
 
+Porting just the effect into another app? See **[INTEGRATION.md](INTEGRATION.md)** —
+the layer is two DOM-free files, none of the editor is needed.
+
 ```bash
 npm install
 npm run dev      # http://localhost:5187
